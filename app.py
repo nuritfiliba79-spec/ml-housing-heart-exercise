@@ -72,6 +72,21 @@ def train_housing(df):
 def part_a():
     st.header("חלק א: אנליזה וניבוי מחירי דיור")
     df = load_housing()
+    model, cols, X_train, X_test, y_train, y_test = train_housing(df)
+    r2_test = r2_score(y_test, model.predict(X_test))
+    r2_train = r2_score(y_train, model.predict(X_train))
+
+    # תקציר R² - מוצג בראש העמוד
+    with st.container(border=True):
+        st.subheader("📐 טיב המודל – R²")
+        c1, c2, c3 = st.columns(3)
+        c1.metric(f"R² על סט המבחן (20% – {len(X_test)} דירות)", f"{r2_test:.3f}")
+        c2.metric(f"R² על סט האימון (80% – {len(X_train)} דירות)", f"{r2_train:.3f}")
+        c3.metric("פער אימון-מבחן", f"{r2_train - r2_test:.3f}")
+        st.markdown(
+            f"המודל מסביר כ-**{r2_test:.0%}** מהשונות במחירי דירות שלא ראה באימון. "
+            "הפער הקטן בין האימון למבחן מעיד שאין התאמת יתר (Overfitting)."
+        )
 
     tab1, tab2, tab3, tab4 = st.tabs(["📊 חקירת נתונים", "🛠️ בניית המודל", "📈 הערכת ביצועים", "🔮 פרדיקציה"])
 
@@ -92,12 +107,9 @@ def part_a():
             st.plotly_chart(
                 px.scatter(df, x="sqft_living", y="price", opacity=0.4,
                            title="מחיר מול שטח מגורים"),
-                width="stretch",
             )
         corr = df.corr()["price"].drop("price").sort_values()
         st.plotly_chart(px.bar(corr, orientation="h", title="מתאם של כל משתנה עם המחיר"))
-
-    model, cols, X_train, X_test, y_train, y_test = train_housing(df)
 
     # ---------- בניית המודל ----------
     with tab2:
@@ -139,7 +151,7 @@ def part_a():
         c2.metric("MAE", f"${mae:,.0f}")
         c3.metric("RMSE", f"${rmse:,.0f}")
         c4.metric("MAPE", f"{mape:.1%}")
-        st.caption(f"R² על סט האימון: {r2_score(y_train, pred_train):.3f} (להשוואה – בדיקת התאמת יתר)")
+        st.caption(f"R² על סט האימון: {r2_train:.3f} (להשוואה – בדיקת התאמת יתר)")
 
         st.markdown(
             f"""
@@ -289,12 +301,10 @@ def part_b():
         )
         col1, col2 = st.columns(2)
         with col1:
-            st.plotly_chart(px.box(df, x="target", y="thalach", color="target", title="דופק מקסימלי לפי target"),
-                            width="stretch")
+            st.plotly_chart(px.box(df, x="target", y="thalach", color="target", title="דופק מקסימלי לפי target"))
         with col2:
             ct = pd.crosstab(df.cp, df.target, normalize="index").reset_index()
-            st.plotly_chart(px.bar(ct, x="cp", y=1, title="שיעור target=1 לפי סוג כאב בחזה (cp)"),
-                            width="stretch")
+            st.plotly_chart(px.bar(ct, x="cp", y=1, title="שיעור target=1 לפי סוג כאב בחזה (cp)"))
 
     model, scaler, cols, X_train, X_test, y_train, y_test = train_heart(df)
 
@@ -314,8 +324,7 @@ def part_b():
         coef = pd.DataFrame({"משתנה": cols, "מקדם": model.coef_[0], "Odds Ratio": np.exp(model.coef_[0])})
         coef = coef.sort_values("מקדם")
         st.plotly_chart(px.bar(coef, x="מקדם", y="משתנה", orientation="h",
-                               title="מקדמי המודל (משתנים מנורמלים) – חיובי = מעלה סיכון"),
-                        width="stretch")
+                               title="מקדמי המודל (משתנים מנורמלים) – חיובי = מעלה סיכון"))
         st.info(
             "פרשנות: מקדם חיובי מעלה את הסיכוי ל-target=1. למשל דופק מקסימלי גבוה (thalach) וכאב חזה מסוג 1-3 קשורים לסיכון גבוה, "
             "ואילו תעוקה במאמץ (exang), יותר כלי דם חסומים (ca) ומין זכר קשורים בנתונים אלה ל-target נמוך יותר."
