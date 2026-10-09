@@ -87,7 +87,7 @@ def part_a():
 
         col1, col2 = st.columns(2)
         with col1:
-            st.plotly_chart(px.histogram(df, x="price", nbins=60, title="התפלגות מחירים"), width="stretch")
+            st.plotly_chart(px.histogram(df, x="price", nbins=60, title="התפלגות מחירים"))
         with col2:
             st.plotly_chart(
                 px.scatter(df, x="sqft_living", y="price", opacity=0.4,
@@ -95,7 +95,7 @@ def part_a():
                 width="stretch",
             )
         corr = df.corr()["price"].drop("price").sort_values()
-        st.plotly_chart(px.bar(corr, orientation="h", title="מתאם של כל משתנה עם המחיר"), width="stretch")
+        st.plotly_chart(px.bar(corr, orientation="h", title="מתאם של כל משתנה עם המחיר"))
 
     model, cols, X_train, X_test, y_train, y_test = train_housing(df)
 
@@ -145,8 +145,8 @@ def part_a():
             f"""
             **הסבר המדדים:**
             - **R² = {r2:.3f}** – המודל מסביר כ-{r2:.0%} מהשונות במחירי הדירות.
-            - **MAE = ${mae:,.0f}** – בממוצע, החיזוי טועה בכ-${mae:,.0f} (ערך מוחלט).
-            - **RMSE = ${rmse:,.0f}** – גבוה מ-MAE כי הוא "מעניש" טעויות גדולות (בעיקר בדירות יוקרה יקרות במיוחד).
+            - **MAE = \\${mae:,.0f}** – בממוצע, החיזוי טועה בכ-\\${mae:,.0f} (ערך מוחלט).
+            - **RMSE = \\${rmse:,.0f}** – גבוה מ-MAE כי הוא "מעניש" טעויות גדולות (בעיקר בדירות יוקרה יקרות במיוחד).
             - **MAPE = {mape:.1%}** – שגיאה יחסית ממוצעת.
 
             **מסקנה:** מודל לינארי פשוט נותן הערכה סבירה, אך הוא אינו מתחשב במיקום (שכונה/מיקוד) –
@@ -160,10 +160,10 @@ def part_a():
                              title="מחיר אמיתי מול חזוי (סט מבחן)")
             lim = [0, max(y_test.max(), pred_test.max())]
             fig.add_trace(go.Scatter(x=lim, y=lim, mode="lines", name="חיזוי מושלם", line=dict(dash="dash")))
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig)
         with col2:
             resid = y_test - pred_test
-            st.plotly_chart(px.histogram(resid, nbins=60, title="התפלגות השאריות (Residuals)"), width="stretch")
+            st.plotly_chart(px.histogram(resid, nbins=60, title="התפלגות השאריות (Residuals)"))
 
     # ---------- פרדיקציה ----------
     with tab4:
@@ -196,7 +196,7 @@ def part_a():
         x_new = encode_housing(new)[cols]
         price = model.predict(x_new)[0]
         st.dataframe(new.drop(columns="price"), width="stretch", hide_index=True)
-        st.success(f"### מחיר חזוי: ${price:,.0f}")
+        st.success(f"### מחיר חזוי: \\${price:,.0f}")
 
         # בדיקת סבירות מול דירות דומות בנתונים
         similar = df[(df.bedrooms == bedrooms) & (df.sqft_living.between(sqft_living * 0.85, sqft_living * 1.15))]
@@ -207,18 +207,18 @@ def part_a():
                 f"""
                 **האם התוצאה סבירה?**
                 בנתונים נמצאו **{len(similar)}** דירות דומות ({bedrooms} חדרי שינה, שטח ±15%).
-                המחיר החציוני שלהן **${med:,.0f}**, והטווח הבין-רבעוני **${lo:,.0f} – ${hi:,.0f}**.
+                המחיר החציוני שלהן **\\${med:,.0f}**, והטווח הבין-רבעוני **\\${lo:,.0f} – \\${hi:,.0f}**.
 
                 {"✅ המחיר החזוי נמצא בתוך הטווח הטיפוסי של דירות דומות – התוצאה נראית סבירה." if in_range else
                  "⚠️ המחיר החזוי מחוץ לטווח הטיפוסי של דירות דומות – ייתכן שהשילוב שבחרתם חריג (נוף, מצב, חוף) או שהמודל הלינארי פחות מדויק בקצוות."}
 
                 המודל מתמחר בעיקר לפי שטח המגורים, הנוף, קרבה לחוף ומצב הדירה. יש לזכור שטעות טיפוסית
-                של המודל היא כ-${mae:,.0f}, ולכן כדאי להתייחס לחיזוי כהערכה בטווח ולא כמחיר מדויק.
+                של המודל היא כ-\\${mae:,.0f}, ולכן כדאי להתייחס לחיזוי כהערכה בטווח ולא כמחיר מדויק.
                 """
             )
             fig = px.histogram(similar, x="price", nbins=30, title="מחירי דירות דומות ומיקום החיזוי")
             fig.add_vline(x=price, line_dash="dash", line_color="red", annotation_text="חיזוי")
-            st.plotly_chart(fig, width="stretch")
+            st.plotly_chart(fig)
 
 
 # =====================================================================
@@ -340,7 +340,7 @@ def part_b():
         fig = px.imshow(cm, text_auto=True, color_continuous_scale="Blues",
                         x=["חזוי 0", "חזוי 1"], y=["אמיתי 0", "אמיתי 1"], title="מטריצת בלבול")
         col1, col2 = st.columns([1, 1.3])
-        col1.plotly_chart(fig, width="stretch")
+        col1.plotly_chart(fig)
         tn, fp, fn, tp = cm.ravel()
         col2.markdown(
             f"""
@@ -407,7 +407,7 @@ def part_b():
                              {"range": [50, 100], "color": "#f8d0d0"}],
                    "threshold": {"line": {"color": "black", "width": 3}, "value": 50}},
         ))
-        st.plotly_chart(fig, width="stretch")
+        st.plotly_chart(fig)
 
         # תרומת כל משתנה לחיזוי (מקדם * ערך מנורמל)
         contrib = pd.Series(model.coef_[0] * x_new[0], index=cols).sort_values()
