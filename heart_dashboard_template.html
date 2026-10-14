@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--PAGE-START-->
+<title>מחשבון סיכון להתקף לב</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700&family=Assistant:wght@400;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: clinical chart sheet. Calculator first (form | result), then test-set performance, then how the model works. */
+:root {
+  --bg: #f4f7f8; --surface: #ffffff; --sunken: #eaf0f2;
+  --ink: #12202a; --ink-2: #4a5a66; --muted: #6f7f8a; --line: #d9e2e6;
+  --accent: #0f6e8c; --accent-soft: #d7ecf3;
+  --low: #1b8456; --mid: #b57800; --high: #c4372e;
+  --low-soft: #dcf1e6; --mid-soft: #fbefd2; --high-soft: #f9dedb;
+  --up: #d4483e; --down: #2a78d6;
+  --f-display: "Rubik", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Assistant", "Segoe UI", system-ui, sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1418; --surface: #142027; --sunken: #1b2a33;
+    --ink: #e7eef1; --ink-2: #a8b7c0; --muted: #82939d; --line: #263741;
+    --accent: #55b6d3; --accent-soft: #173543;
+    --low: #45c48a; --mid: #e2a72c; --high: #f06d63;
+    --low-soft: #15342a; --mid-soft: #3a2e12; --high-soft: #3d1d1b;
+    --up: #e66767; --down: #3987e5;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1418; --surface: #142027; --sunken: #1b2a33;
+  --ink: #e7eef1; --ink-2: #a8b7c0; --muted: #82939d; --line: #263741;
+  --accent: #55b6d3; --accent-soft: #173543;
+  --low: #45c48a; --mid: #e2a72c; --high: #f06d63;
+  --low-soft: #15342a; --mid-soft: #3a2e12; --high-soft: #3d1d1b;
+  --up: #e66767; --down: #3987e5;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.55 var(--f-body); }
+.page { max-width: 1180px; margin: 0 auto; padding-block: 32px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 48px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 1.5rem; font-weight: 600; }
+h3 { font-size: 1.02rem; font-weight: 600; }
+p { margin: 0; }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
+.eyebrow { font-size: .8rem; font-weight: 700; letter-spacing: .08em; color: var(--accent); }
+.lede { color: var(--ink-2); max-width: 68ch; }
+.muted { color: var(--muted); font-size: .9rem; }
+section { display: grid; gap: 20px; }
+.sec-head { display: grid; gap: 6px; }
+
+/* header */
+header { display: grid; gap: 14px; }
+.facts { display: flex; flex-wrap: wrap; gap: 8px 28px; padding-top: 14px; border-top: 1px solid var(--line); }
+.fact { display: grid; }
+.fact b { font: 600 1.25rem var(--f-display); }
+.fact span { font-size: .85rem; color: var(--muted); }
+
+/* calculator */
+.calc { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.form { display: grid; gap: 22px; }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.presets span { font-size: .9rem; color: var(--muted); margin-inline-end: 4px; }
+button { font: 600 .92rem var(--f-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+button:hover { border-color: var(--accent); color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 14px; }
+legend { font: 600 .82rem var(--f-body); letter-spacing: .06em; color: var(--muted); padding: 0 0 10px; }
+.group { padding-top: 16px; border-top: 1px solid var(--line); }
+.field { display: grid; gap: 6px; }
+.field-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.field label, .field .lbl { font-weight: 600; }
+.field .code { font: 500 .78rem var(--f-num); color: var(--muted); margin-inline-start: 6px; }
+.field output { font: 500 1rem var(--f-num); }
+.hint { font-size: .82rem; color: var(--muted); }
+input[type=range] { width: 100%; accent-color: var(--accent); margin: 0; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { font-weight: 600; font-size: .92rem; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--surface); cursor: pointer; }
+.seg input:checked + label { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.seg input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
+
+.result { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 14px; padding: 24px; display: grid; gap: 20px; }
+.prob-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.prob { font: 700 clamp(3rem, 8vw, 4.4rem)/1 var(--f-display); font-variant-numeric: tabular-nums; }
+.pill { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; padding: 6px 14px; border-radius: 999px; }
+.pill::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.pill.low { color: var(--low); background: var(--low-soft); }
+.pill.mid { color: var(--mid); background: var(--mid-soft); }
+.pill.high { color: var(--high); background: var(--high-soft); }
+.scale { display: grid; gap: 6px; }
+.scale-bar { position: relative; height: 14px; border-radius: 7px; direction: ltr;
+  background: linear-gradient(90deg, var(--low-soft) 0 30%, var(--mid-soft) 30% 50%, var(--high-soft) 50% 100%); }
+.scale-fill { position: absolute; inset-block: 0; left: 0; border-radius: 7px; background: var(--ink); opacity: .85; transition: width .25s; }
+.scale-thr { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink-2); }
+.scale-ticks { display: flex; justify-content: space-between; direction: ltr; font: 500 .75rem var(--f-num); color: var(--muted); }
+.verdict { color: var(--ink-2); }
+.verdict strong { color: var(--ink); }
+.drivers { display: grid; gap: 8px; }
+.drivers-head { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); }
+.drv { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) 3.4rem; gap: 10px; align-items: center; font-size: .9rem; }
+.drv-track { position: relative; height: 12px; direction: ltr; }
+.drv-track::before { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--line); }
+.drv-bar { position: absolute; top: 0; height: 12px; border-radius: 3px; }
+.drv-val { font: 500 .82rem var(--f-num); text-align: left; direction: ltr; }
+@media (prefers-reduced-motion: reduce) { .scale-fill { transition: none; } }
+
+/* performance */
+.thr-ctl { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center;
+  background: var(--sunken); border-radius: 12px; padding: 14px 18px; }
+.thr-ctl label { font-weight: 700; }
+.thr-ctl output { font: 500 1.1rem var(--f-num); min-width: 3.2rem; text-align: center; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-block: 1px solid var(--line); }
+.kpi { padding: 18px 18px 18px 14px; display: grid; gap: 6px; align-content: start; }
+.kpi + .kpi { border-inline-start: 1px solid var(--line); }
+.kpi-name { font: 600 .8rem var(--f-body); letter-spacing: .06em; color: var(--muted); }
+.kpi-val { font: 700 2.2rem/1 var(--f-display); font-variant-numeric: tabular-nums; }
+.kpi-calc { font: 500 .8rem var(--f-num); color: var(--ink-2); direction: ltr; text-align: right; }
+.kpi p { font-size: .9rem; color: var(--ink-2); }
+.kpi.key .kpi-name { color: var(--accent); }
+.perf-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+.panel { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.cm { display: grid; grid-template-columns: auto 1fr 1fr; gap: 6px; }
+.cm .h { font-size: .82rem; color: var(--muted); font-weight: 600; display: flex; align-items: center; justify-content: center; text-align: center; padding: 4px; }
+.cm .rh { justify-content: flex-start; }
+.cell { border-radius: 10px; padding: 14px; display: grid; gap: 2px; background: var(--sunken); }
+.cell b { font: 700 1.9rem/1 var(--f-display); font-variant-numeric: tabular-nums; }
+.cell span { font-size: .84rem; color: var(--ink-2); }
+.cell.ok { background: var(--accent-soft); }
+.cell.miss { background: var(--high-soft); }
+.cell.miss b { color: var(--high); }
+.roc-wrap { position: relative; direction: ltr; }
+.roc-wrap svg { width: 100%; height: auto; display: block; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font: 500 .78rem/1.4 var(--f-num);
+  padding: 6px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -120%); }
+.callout { border-inline-start: 3px solid var(--accent); padding: 4px 16px; color: var(--ink-2); max-width: 75ch; }
+.callout strong { color: var(--ink); }
+
+/* model */
+.model-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 32px; }
+.coef { display: grid; gap: 8px; }
+.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 12px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 1.8rem minmax(0, 1fr); gap: 10px; color: var(--ink-2); font-size: .95rem; }
+.steps li::before { content: counter(s); font: 600 .85rem var(--f-num); color: var(--accent); border: 1px solid var(--line);
+  border-radius: 50%; width: 1.8rem; height: 1.8rem; display: grid; place-items: center; }
+.steps strong { color: var(--ink); }
+.formula { font: 500 .9rem var(--f-num); background: var(--sunken); border-radius: 8px; padding: 10px 14px; direction: ltr; text-align: left; overflow-x: auto; }
+.fit { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: .9rem; color: var(--ink-2); }
+footer { border-top: 1px solid var(--line); padding-top: 18px; font-size: .88rem; color: var(--muted); display: grid; gap: 6px; max-width: 90ch; }
+
+@media (max-width: 900px) {
+  .calc, .perf-grid, .model-grid { grid-template-columns: 1fr; }
+  .result { position: static; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi:nth-child(3) { border-inline-start: 0; }
+  .kpi:nth-child(n+3) { border-top: 1px solid var(--line); }
+}
+@media (max-width: 480px) {
+  .two { grid-template-columns: 1fr; }
+  .drv { grid-template-columns: 6rem minmax(0, 1fr) 3rem; }
+  .thr-ctl { grid-template-columns: 1fr auto; }
+  .thr-ctl input { grid-column: 1 / -1; grid-row: 2; }
+  .result { padding: 18px; }
+}
+</style>
+
+<div class="page" dir="rtl" lang="he">
+  <header>
+    <span class="eyebrow">תרגיל למידת מכונה · חלק ב · רגרסיה לוגיסטית</span>
+    <h1>מחשבון סיכון להתקף לב</h1>
+    <p class="lede">המודל לומד מנתוני מטופלים אמיתיים (UCI Heart Disease, קליבלנד) ומחזיר את ההסתברות שמטופל שייך לקבוצת הסיכון המוגבר
+      (<span class="num">target = 1</span>). הזינו נתוני מטופל, וההערכה תתעדכן מיד. מתחת למחשבון מופיעים ביצועי המודל על מטופלים שלא ראה באימון.</p>
+    <div class="facts" id="facts"></div>
+  </header>
+
+  <section aria-labelledby="calc-title">
+    <div class="sec-head">
+      <h2 id="calc-title">הערכת סיכון למטופל</h2>
+    </div>
+    <div class="calc">
+      <form class="form" id="form" autocomplete="off">
+        <div class="presets">
+          <span>מילוי מהיר:</span>
+          <button type="button" data-preset="base">מטופל לדוגמה</button>
+          <button type="button" data-preset="high">פרופיל סיכון גבוה</button>
+          <button type="button" data-preset="low">פרופיל סיכון נמוך</button>
+        </div>
+
+        <fieldset class="group">
+          <legend>פרטים אישיים</legend>
+          <div class="field">
+            <div class="field-top"><label for="age">גיל<span class="code">age</span></label><output id="age-out" class="num"></output></div>
+            <input type="range" id="age" min="29" max="77" step="1">
+          </div>
+          <div class="field">
+            <span class="lbl" id="sex-l">מין<span class="code">sex</span></span>
+            <div class="seg" role="radiogroup" aria-labelledby="sex-l">
+              <input type="radio" name="sex" id="sex1" value="1"><label for="sex1">זכר</label>
+              <input type="radio" name="sex" id="sex0" value="0"><label for="sex0">נקבה</label>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>בדיקות במנוחה</legend>
+          <div class="two">
+            <div class="field">
+              <div class="field-top"><label for="trtbps">לחץ דם סיסטולי<span class="code">trtbps</span></label><output id="trtbps-out" class="num"></output></div>
+              <input type="range" id="trtbps" min="90" max="200" step="1">
+              <span class="hint">mm Hg · תקין עד 120</span>
+            </div>
+            <div class="field">
+              <div class="field-top"><label for="chol">כולסטרול<span class="code">chol</span></label><output id="chol-out" class="num"></output></div>
+              <input type="range" id="chol" min="120" max="565" step="1">
+              <span class="hint">mg/dl · רצוי מתחת ל-200</span>
+            </div>
+          </div>
+          <div class="field">
+            <span class="lbl" id="fbs-l">סוכר בצום מעל 120 mg/dl<span class="code">fbs</span></span>
+            <div class="seg" role="radiogroup" aria-labelledby="fbs-l">
+              <input type="radio" name="fbs" id="fbs0" value="0"><label for="fbs0">לא</label>
+              <input type="radio" name="fbs" id="fbs1" value="1"><label for="fbs1">כן</label>
+            </div>
+          </div>
+          <div class="field">
+            <span class="lbl" id="ecg-l">אק"ג במנוחה<span class="code">rest_ecg</span></span>
+            <div class="seg" role="radiogroup" aria-labelledby="ecg-l">
+              <input type="radio" name="rest_ecg" id="ecg0" value="0"><label for="ecg0">תקין</label>
+              <input type="radio" name="rest_ecg" id="ecg1" value="1"><label for="ecg1">חריגת ST-T</label>
+              <input type="radio" name="rest_ecg" id="ecg2" value="2"><label for="ecg2">עיבוי חדר שמאל</label>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>תסמינים, מבחן מאמץ וצנתור</legend>
+          <div class="field">
+            <span class="lbl" id="cp-l">סוג כאב בחזה<span class="code">cp</span></span>
+            <div class="seg" role="radiogroup" aria-labelledby="cp-l">
+              <input type="radio" name="cp" id="cp0" value="0"><label for="cp0">0 · אסימפטומטי</label>
+              <input type="radio" name="cp" id="cp1" value="1"><label for="cp1">1 · תעוקה טיפוסית</label>
+              <input type="radio" name="cp" id="cp2" value="2"><label for="cp2">2 · תעוקה לא טיפוסית</label>
+              <input type="radio" name="cp" id="cp3" value="3"><label for="cp3">3 · כאב לא תעוקתי</label>
+            </div>
+          </div>
+          <div class="field">
+            <div class="field-top"><label for="thalach">דופק מקסימלי במאמץ<span class="code">thalach</span></label><output id="thalach-out" class="num"></output></div>
+            <input type="range" id="thalach" min="70" max="205" step="1">
+            <span class="hint">פעימות לדקה</span>
+          </div>
+          <div class="two">
+            <div class="field">
+              <span class="lbl" id="exang-l">תעוקה בזמן מאמץ<span class="code">exang</span></span>
+              <div class="seg" role="radiogroup" aria-labelledby="exang-l">
+                <input type="radio" name="exang" id="exang0" value="0"><label for="exang0">לא</label>
+                <input type="radio" name="exang" id="exang1" value="1"><label for="exang1">כן</label>
+              </div>
+            </div>
+            <div class="field">
+              <span class="lbl" id="ca-l">כלי דם עיקריים שנצבעו<span class="code">ca</span></span>
+              <div class="seg" role="radiogroup" aria-labelledby="ca-l">
+                <input type="radio" name="ca" id="ca0" value="0"><label for="ca0">0</label>
+                <input type="radio" name="ca" id="ca1" value="1"><label for="ca1">1</label>
+                <input type="radio" name="ca" id="ca2" value="2"><label for="ca2">2</label>
+                <input type="radio" name="ca" id="ca3" value="3"><label for="ca3">3</label>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+      </form>
+
+      <aside class="result" aria-live="polite">
+        <div class="prob-row">
+          <div>
+            <div class="muted">הסתברות לסיכון מוגבר</div>
+            <div class="prob" id="prob">–</div>
+          </div>
+          <span class="pill" id="pill">–</span>
+        </div>
+        <div class="scale">
+          <div class="scale-bar"><div class="scale-fill" id="fill"></div><div class="scale-thr" id="thr-mark" title="סף ההחלטה"></div></div>
+          <div class="scale-ticks"><span>0%</span><span>30%</span><span>50%</span><span>100%</span></div>
+        </div>
+        <p class="verdict" id="verdict"></p>
+        <div class="drivers">
+          <h3>מה השפיע על התוצאה</h3>
+          <p class="muted">השפעת כל נתון ביחס למטופל ממוצע במדגם. הכפלה של יחס הסיכויים (odds).</p>
+          <div class="drivers-head"><span>מעלה סיכון</span><span>מוריד סיכון</span></div>
+          <div id="drivers"></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section aria-labelledby="perf-title">
+    <div class="sec-head">
+      <h2 id="perf-title">כמה המודל מדויק</h2>
+      <p class="lede" id="perf-lede"></p>
+    </div>
+    <div class="thr-ctl">
+      <label for="thr">סף החלטה</label>
+      <input type="range" id="thr" min="0.1" max="0.9" step="0.05" value="0.5">
+      <output id="thr-out" class="num">0.50</output>
+    </div>
+    <p class="muted">מטופל שההסתברות שלו מעל הסף מסווג "בסיכון". הזיזו את הסף כדי לראות איך Precision ו-Recall משתנים זה על חשבון זה. ROC-AUC לא תלוי בסף.</p>
+    <div class="kpis" id="kpis"></div>
+    <div class="perf-grid">
+      <div class="panel">
+        <h3>מטריצת בלבול</h3>
+        <p class="muted">איך סווגו מטופלי סט המבחן לפי הסף הנוכחי.</p>
+        <div class="cm" id="cm"></div>
+      </div>
+      <div class="panel">
+        <h3>עקומת ROC</h3>
+        <p class="muted">כל נקודה היא סף אחר. ככל שהעקומה קרובה לפינה השמאלית העליונה, המודל מפריד טוב יותר. העבירו את העכבר על העקומה.</p>
+        <div class="roc-wrap" id="roc-wrap"><svg id="roc" viewBox="0 0 340 300" role="img" aria-label="עקומת ROC של המודל על סט המבחן"></svg><div class="tip" id="tip" hidden></div></div>
+      </div>
+    </div>
+    <p class="callout"><strong>איזה מדד הכי חשוב כאן? Recall.</strong> פספוס של מטופל בסיכון (False Negative) עלול לעלות בחיי אדם,
+      בעוד שאזעקת שווא (False Positive) עולה בבדיקות נוספות. לכן במצב אמיתי עדיף להוריד את הסף מתחת ל-0.5 ולקבל Recall גבוה יותר, גם במחיר של Precision נמוך יותר.</p>
+  </section>
+
+  <section aria-labelledby="model-title">
+    <div class="sec-head">
+      <h2 id="model-title">איך המודל עובד</h2>
+      <p class="lede">רגרסיה לוגיסטית מחברת את כל הנתונים לציון אחד, וממירה אותו להסתברות בין 0 ל-1 בעזרת פונקציית הסיגמואיד:</p>
+    </div>
+    <div class="formula">p = 1 / (1 + e<sup>−(b₀ + b₁·z₁ + … + bₖ·zₖ)</sup>) &nbsp;&nbsp; z = (x − mean) / std</div>
+    <div class="model-grid">
+      <div class="panel">
+        <h3>משקל כל משתנה במודל</h3>
+        <p class="muted">פי כמה משתנים הסיכויים כשהמשתנה עולה בסטיית תקן אחת (Odds Ratio). מעל 1 מעלה סיכון, מתחת ל-1 מוריד.</p>
+        <div class="drivers-head"><span>מעלה סיכון</span><span>מוריד סיכון</span></div>
+        <div class="coef" id="coef"></div>
+      </div>
+      <div class="panel">
+        <h3>שלבי הבנייה</h3>
+        <ol class="steps" id="steps"></ol>
+        <div class="fit" id="fit"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>המודל הוא כלי לימודי ותומך החלטה, מבוסס על כ-300 מטופלים בלבד, ואינו מחליף אבחון רפואי.</p>
+    <p>בנתונים האלה חלק מהקשרים הפוכים לאינטואיציה הקלינית (למשל תעוקה במאמץ ויותר כלי דם חסומים מופיעים אצל <span class="num">target = 0</span>).
+      זה מאפיין של הגדרת עמודת target במאגר, והמודל לומד את מה שמופיע בנתונים.</p>
+    <p>נוצר על ידי <span class="num">heart_dashboard.py</span> · scikit-learn LogisticRegression · random_state = 42</p>
+  </footer>
+</div>
+
+<script>
+const M = /*__MODEL__*/{};
+
+const NAMES = { age: "גיל", sex: "מין (זכר)", exang: "תעוקה במאמץ", ca: "כלי דם חסומים", cp: "סוג כאב בחזה",
+  trtbps: "לחץ דם", chol: "כולסטרול", fbs: "סוכר בצום", rest_ecg: "אק\"ג במנוחה", thalach: "דופק מקסימלי",
+  cp_1: "כאב: תעוקה טיפוסית", cp_2: "כאב: תעוקה לא טיפוסית", cp_3: "כאב: לא תעוקתי",
+  rest_ecg_1: "אק\"ג: חריגת ST-T", rest_ecg_2: "אק\"ג: עיבוי חדר" };
+const SLIDERS = ["age", "trtbps", "chol", "thalach"];
+const RADIOS = ["sex", "fbs", "rest_ecg", "cp", "exang", "ca"];
+const PRESETS = {
+  base: { age: 58, sex: 1, trtbps: 140, chol: 245, fbs: 0, rest_ecg: 1, cp: 2, thalach: 155, exang: 0, ca: 0 },
+  high: { age: 45, sex: 0, trtbps: 125, chol: 220, fbs: 0, rest_ecg: 1, cp: 2, thalach: 172, exang: 0, ca: 0 },
+  low:  { age: 62, sex: 1, trtbps: 150, chol: 290, fbs: 1, rest_ecg: 0, cp: 0, thalach: 118, exang: 1, ca: 2 },
+};
+const $ = (id) => document.getElementById(id);
+const pct = (v, d = 0) => (v * 100).toFixed(d) + "%";
+const sigmoid = (s) => 1 / (1 + Math.exp(-s));
+let threshold = 0.5;
+
+function readPatient() {
+  const p = {};
+  SLIDERS.forEach((k) => (p[k] = +$(k).value));
+  RADIOS.forEach((k) => (p[k] = +document.querySelector(`input[name="${k}"]:checked`).value));
+  return p;
+}
+function setPatient(p) {
+  SLIDERS.forEach((k) => ($(k).value = p[k]));
+  RADIOS.forEach((k) => (document.querySelector(`input[name="${k}"][value="${p[k]}"]`).checked = true));
+  update();
+}
+// מקודד כמו encode() בפייתון: One-Hot ל-cp ו-rest_ecg
+function encode(p) {
+  return M.columns.map((c) => {
+    const m = c.match(/^(cp|rest_ecg)_(\d)$/);
+    return m ? +(p[m[1]] === +m[2]) : p[c];
+  });
+}
+function score(p) {
+  const x = encode(p);
+  const parts = x.map((v, i) => M.coef[i] * (v - M.mean[i]) / M.scale[i]);
+  const prob = sigmoid(M.intercept + parts.reduce((a, b) => a + b, 0));
+  // איחוד עמודות One-Hot חזרה למשתנה המקורי
+  const byFeat = {};
+  M.columns.forEach((c, i) => { const f = c.replace(/_\d$/, ""); byFeat[f] = (byFeat[f] || 0) + parts[i]; });
+  return { prob, byFeat };
+}
+function band(p) {
+  if (p >= 0.5) return ["high", "סיכון גבוה"];
+  if (p >= 0.3) return ["mid", "אזור אפור"];
+  return ["low", "סיכון נמוך"];
+}
+function divBar(val, maxAbs) {
+  // ערך חיובי (מעלה סיכון) נמשך ימינה מהמרכז, שלילי שמאלה - בהתאם לכותרות בעמוד מימין לשמאל
+  const w = Math.min(Math.abs(val) / maxAbs, 1) * 50;
+  const color = val >= 0 ? "var(--up)" : "var(--down)";
+  const side = val >= 0 ? `left:50%` : `right:50%`;
+  return `<div class="drv-track"><div class="drv-bar" style="${side};width:${w}%;background:${color}"></div></div>`;
+}
+
+function update() {
+  SLIDERS.forEach((k) => ($(k + "-out").textContent = $(k).value));
+  const p = readPatient();
+  const { prob, byFeat } = score(p);
+  const [cls, label] = band(prob);
+  $("prob").textContent = pct(prob);
+  const pill = $("pill"); pill.className = "pill " + cls; pill.textContent = label;
+  $("fill").style.width = pct(prob, 1);
+  $("thr-mark").style.left = `calc(${threshold * 100}% - 1px)`;
+
+  const above = prob >= threshold;
+  const top = Object.entries(byFeat).sort((a, b) => b[1] - a[1]);
+  const ups = top.filter(([, v]) => v > 0.15).slice(0, 2).map(([k]) => NAMES[k]);
+  const downs = top.filter(([, v]) => v < -0.15).reverse().slice(0, 2).map(([k]) => NAMES[k]);
+  let text = above
+    ? `<strong>המודל מסווג את המטופל כבעל סיכון מוגבר</strong> (מעל סף ${threshold.toFixed(2)}). מומלץ בירור קרדיולוגי: אק"ג במאמץ, אקו לב, ולפי הצורך צנתור.`
+    : prob >= 0.3
+      ? `<strong>מתחת לסף, אבל באזור האפור.</strong> כיוון שפספוס מסוכן, כדאי לשקול מעקב או בירור נוסף ולא לשחרר אוטומטית.`
+      : `<strong>המודל מסווג את המטופל כבעל סיכון נמוך.</strong> אין אינדיקציה דחופה לפי המודל; מעקב שגרתי וטיפול בגורמי סיכון.`;
+  if (ups.length) text += ` העלו את הסיכון: ${ups.join(", ")}.`;
+  if (downs.length) text += ` הורידו: ${downs.join(", ")}.`;
+  $("verdict").innerHTML = text;
+
+  const rows = Object.entries(byFeat).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+  const maxAbs = Math.max(1, ...rows.map(([, v]) => Math.abs(v)));
+  $("drivers").innerHTML = rows.map(([k, v]) =>
+    `<div class="drv"><span>${NAMES[k]}</span>${divBar(v, maxAbs)}<span class="drv-val">×${Math.exp(v).toFixed(2)}</span></div>`).join("");
+}
+
+function confusionAt(t) {
+  let tp = 0, fp = 0, fn = 0, tn = 0;
+  M.test.forEach(([y, p]) => { const yh = p >= t ? 1 : 0; if (yh && y) tp++; else if (yh) fp++; else if (y) fn++; else tn++; });
+  const precision = tp + fp ? tp / (tp + fp) : 0, recall = tp + fn ? tp / (tp + fn) : 0;
+  return { tp, fp, fn, tn, precision, recall, f1: precision + recall ? 2 * precision * recall / (precision + recall) : 0,
+    accuracy: (tp + tn) / M.test.length, fpr: fp + tn ? fp / (fp + tn) : 0 };
+}
+
+function renderPerf() {
+  const c = confusionAt(threshold);
+  $("thr-out").textContent = threshold.toFixed(2);
+  const kpis = [
+    ["Precision", c.precision, `${c.tp} / (${c.tp} + ${c.fp})`, "מתוך מי שסומן בסיכון, כמה באמת בסיכון."],
+    ["Recall", c.recall, `${c.tp} / (${c.tp} + ${c.fn})`, "מתוך כל מי שבאמת בסיכון, כמה המודל זיהה.", true],
+    ["F1 Score", c.f1, "2·P·R / (P + R)", "ממוצע הרמוני של Precision ו-Recall."],
+    ["ROC-AUC", M.metrics.roc_auc, "השטח מתחת לעקומה", "הסיכוי שמטופל בסיכון יקבל ציון גבוה יותר ממטופל שאינו בסיכון."],
+  ];
+  $("kpis").innerHTML = kpis.map(([n, v, calc, desc, key]) =>
+    `<div class="kpi${key ? " key" : ""}"><span class="kpi-name">${n}</span><span class="kpi-val">${v.toFixed(3)}</span>
+     <span class="kpi-calc">${calc}</span><p>${desc}</p></div>`).join("");
+  $("cm").innerHTML = `
+    <span class="h"></span><span class="h">המודל: בסיכון</span><span class="h">המודל: לא בסיכון</span>
+    <span class="h rh">בפועל: בסיכון</span>
+    <div class="cell ok"><b>${c.tp}</b><span>זוהו נכון (TP)</span></div>
+    <div class="cell miss"><b>${c.fn}</b><span>פוספסו (FN)</span></div>
+    <span class="h rh">בפועל: לא בסיכון</span>
+    <div class="cell"><b>${c.fp}</b><span>אזעקת שווא (FP)</span></div>
+    <div class="cell ok"><b>${c.tn}</b><span>נשללו נכון (TN)</span></div>`;
+  $("perf-lede").innerHTML = `המודל נבחן על <span class="num">${M.n_test}</span> מטופלים (20%) שנבחרו אקראית ולא השתתפו באימון.
+    בסף הנוכחי הוא צדק ב-<span class="num">${c.tp + c.tn}</span> מהם (Accuracy <span class="num">${pct(c.accuracy, 1)}</span>).`;
+  drawRocMarker(c);
+  update();
+}
+
+// ---- ROC ----
+const R = { l: 44, r: 12, t: 12, b: 40, w: 340, h: 300 };
+const rx = (v) => R.l + v * (R.w - R.l - R.r);
+const ry = (v) => R.h - R.b - v * (R.h - R.t - R.b);
+function drawRoc() {
+  const svg = $("roc");
+  let g = "";
+  for (let i = 0; i <= 4; i++) {
+    const v = i / 4;
+    g += `<line x1="${rx(0)}" x2="${rx(1)}" y1="${ry(v)}" y2="${ry(v)}" stroke="var(--line)" stroke-width="1"/>`;
+    g += `<text x="${rx(0) - 8}" y="${ry(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--f-num)">${v.toFixed(2)}</text>`;
+    g += `<text x="${rx(v)}" y="${ry(0) + 18}" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--f-num)">${v.toFixed(2)}</text>`;
+  }
+  const pts = M.roc.map(([f, t]) => `${rx(f)},${ry(t)}`).join(" ");
+  g += `<line x1="${rx(0)}" y1="${ry(0)}" x2="${rx(1)}" y2="${ry(1)}" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+  g += `<text x="${rx(0.62)}" y="${ry(0.5)}" font-size="11" fill="var(--muted)" transform="rotate(-38 ${rx(0.62)} ${ry(0.5)})">ניחוש אקראי</text>`;
+  g += `<polygon points="${rx(0)},${ry(0)} ${pts} ${rx(1)},${ry(0)}" fill="var(--accent)" fill-opacity="0.12"/>`;
+  g += `<polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>`;
+  g += `<text x="${rx(0.55)}" y="${ry(0.18)}" font-size="13" font-weight="600" fill="var(--ink)">AUC = ${M.metrics.roc_auc.toFixed(3)}</text>`;
+  g += `<text x="${(rx(0) + rx(1)) / 2}" y="${R.h - 4}" text-anchor="middle" font-size="11" fill="var(--ink-2)">False Positive Rate</text>`;
+  g += `<text x="12" y="${(ry(0) + ry(1)) / 2}" text-anchor="middle" font-size="11" fill="var(--ink-2)" transform="rotate(-90 12 ${(ry(0) + ry(1)) / 2})">Recall (TPR)</text>`;
+  g += `<g id="roc-marker"></g><circle id="roc-hover" r="5" fill="var(--surface)" stroke="var(--ink)" stroke-width="2" visibility="hidden"/>`;
+  g += `<rect id="roc-hit" x="${rx(0)}" y="${ry(1)}" width="${rx(1) - rx(0)}" height="${ry(0) - ry(1)}" fill="transparent"/>`;
+  svg.innerHTML = g;
+
+  const hit = $("roc-hit"), hov = $("roc-hover"), tip = $("tip");
+  const thresholds = [...new Set(M.test.map(([, p]) => p))].sort((a, b) => b - a);
+  const curve = thresholds.map((t) => ({ t, ...confusionAt(t) }));
+  hit.addEventListener("pointermove", (e) => {
+    const box = svg.getBoundingClientRect();
+    const fx = ((e.clientX - box.left) / box.width * R.w - R.l) / (R.w - R.l - R.r);
+    const best = curve.reduce((a, b) => (Math.abs(b.fpr - fx) < Math.abs(a.fpr - fx) ? b : a));
+    hov.setAttribute("cx", rx(best.fpr)); hov.setAttribute("cy", ry(best.recall)); hov.setAttribute("visibility", "visible");
+    tip.hidden = false;
+    tip.style.left = (rx(best.fpr) / R.w * box.width) + "px";
+    tip.style.top = (ry(best.recall) / R.h * box.height) + "px";
+    tip.innerHTML = `threshold ${best.t.toFixed(2)}<br>Recall ${best.recall.toFixed(2)} · FPR ${best.fpr.toFixed(2)}`;
+  });
+  hit.addEventListener("pointerleave", () => { hov.setAttribute("visibility", "hidden"); tip.hidden = true; });
+}
+function drawRocMarker(c) {
+  const x = rx(c.fpr), y = ry(c.recall);
+  $("roc-marker").innerHTML = `<circle cx="${x}" cy="${y}" r="6" fill="var(--high)" stroke="var(--surface)" stroke-width="2"/>
+    <text x="${x + 10}" y="${y + 16}" font-size="11" font-weight="600" fill="var(--ink)">סף ${threshold.toFixed(2)}</text>`;
+}
+
+function renderModel() {
+  const rows = M.columns.map((c, i) => [c, M.coef[i]]).sort((a, b) => b[1] - a[1]);
+  const maxAbs = Math.max(...rows.map(([, v]) => Math.abs(v)));
+  $("coef").innerHTML = rows.map(([c, v]) =>
+    `<div class="drv"><span>${NAMES[c]}</span>${divBar(v, maxAbs)}<span class="drv-val">×${Math.exp(v).toFixed(2)}</span></div>`).join("");
+  const steps = [
+    `<strong>ניקוי:</strong> הוסרו ${M.n_removed} רשומות עם <span class="num">ca = 4</span>, ערך שאינו חוקי (הטווח 0–3).`,
+    `<strong>קידוד:</strong> <span class="num">cp</span> ו-<span class="num">rest_ecg</span> הם קטגוריות ולא כמויות, ולכן קודדו ב-One-Hot.`,
+    `<strong>חלוקה אקראית:</strong> ${M.n_train} מטופלים לאימון (80%) ו-${M.n_test} למבחן (20%), עם שמירה על יחס החולים בשני הסטים.`,
+    `<strong>נרמול:</strong> StandardScaler שנלמד על סט האימון בלבד, כדי שהמקדמים יהיו ניתנים להשוואה.`,
+    `<strong>אימון:</strong> LogisticRegression של scikit-learn.`,
+    `<strong>הערכה:</strong> Precision, Recall, F1 ו-ROC-AUC על סט המבחן שהמודל לא ראה.`,
+  ];
+  $("steps").innerHTML = steps.map((s) => `<li><span>${s}</span></li>`).join("");
+  const m = M.metrics;
+  $("fit").innerHTML = `<span>ROC-AUC אימון <b class="num">${m.train_roc_auc.toFixed(3)}</b></span>
+    <span>ROC-AUC מבחן <b class="num">${m.roc_auc.toFixed(3)}</b></span>
+    <span>אימות צולב (5 קיפולים) <b class="num">${m.cv_auc_mean.toFixed(3)} ± ${m.cv_auc_std.toFixed(3)}</b></span>
+    <span>הפער הקטן בין אימון למבחן מראה שאין התאמת-יתר.</span>`;
+  $("facts").innerHTML = [
+    [M.n_total, "מטופלים בניתוח"], [M.n_train, "לאימון (80%)"], [M.n_test, "למבחן (20%)"],
+    [pct(M.positive_rate), "עם target = 1"], [m.roc_auc.toFixed(3), "ROC-AUC במבחן"],
+  ].map(([v, l]) => `<div class="fact"><b class="num">${v}</b><span>${l}</span></div>`).join("");
+}
+
+document.querySelectorAll("[data-preset]").forEach((b) => b.addEventListener("click", () => setPatient(PRESETS[b.dataset.preset])));
+$("form").addEventListener("input", update);
+$("thr").addEventListener("input", (e) => { threshold = +e.target.value; renderPerf(); });
+renderModel();
+drawRoc();
+setPatient(PRESETS.base);
+renderPerf();
+</script>
+<!--PAGE-END-->
+</html>
